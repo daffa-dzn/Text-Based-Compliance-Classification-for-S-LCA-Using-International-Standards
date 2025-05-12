@@ -1,78 +1,88 @@
-import streamlit as st
-import pandas as pd
-import os
 import nltk
-import pickle
+import re
+from nltk.stem import WordNetLemmatizer
+from string import punctuation
 
-from nltk.corpus import stopwords
-from utils.pdf_utils import extract_text_from_pdf
-from utils.preprocessing import preprocess_text, find_keywords_with_context
+lemmatizer = WordNetLemmatizer()
 
-# === NLTK Setup ===
-nltk_data_path = os.path.join(os.path.dirname(__file__), "nltk_data")
-os.makedirs(nltk_data_path, exist_ok=True)
-nltk.data.path.append(nltk_data_path)
+# Your full contraction dictionary
+contractions_dict = {
+    "ain't": "am not", "aren't": "are not", "can't": "cannot", "can't've": "cannot have",
+    "'cause": "because", "could've": "could have", "couldn't": "could not",
+    "couldn't've": "could not have", "didn't": "did not", "doesn't": "does not",
+    "don't": "do not", "hadn't": "had not", "hadn't've": "had not have",
+    "hasn't": "has not", "haven't": "have not", "he'd": "he had",
+    "he'd've": "he would have", "he'll": "he will", "he'll've": "he will have",
+    "he's": "he is", "how'd": "how did", "how'd'y": "how do you", "how'll": "how will",
+    "how's": "how is", "i'd": "i had", "i'd've": "i would have", "i'll": "i will",
+    "i'll've": "i will have", "i'm": "i am", "i've": "i have", "isn't": "is not",
+    "it'd": "it had", "it'd've": "it would have", "it'll": "it will",
+    "it'll've": "it will have", "it's": "it is", "let's": "let us", "ma'am": "madam",
+    "mayn't": "may not", "might've": "might have", "mightn't": "might not",
+    "mightn't've": "might not have", "must've": "must have", "mustn't": "must not",
+    "mustn't've": "must not have", "needn't": "need not", "needn't've": "need not have",
+    "o'clock": "of the clock", "oughtn't": "ought not", "oughtn't've": "ought not have",
+    "shan't": "shall not", "sha'n't": "shall not", "shan't've": "shall not have",
+    "she'd": "she had", "she'd've": "she would have", "she'll": "she will",
+    "she'll've": "she will have", "she's": "she is", "should've": "should have",
+    "shouldn't": "should not", "shouldn't've": "should not have", "so've": "so have",
+    "so's": "so is", "that'd": "that had", "that'd've": "that would have",
+    "that's": "that is", "there'd": "there had", "there'd've": "there would have",
+    "there's": "there is", "they'd": "they had", "they'd've": "they would have",
+    "they'll": "they will", "they'll've": "they will have", "they're": "they are",
+    "they've": "they have", "to've": "to have", "wasn't": "was not", "we'd": "we had",
+    "we'd've": "we would have", "we'll": "we will", "we'll've": "we will have",
+    "we're": "we are", "we've": "we have", "weren't": "were not", "what'll": "what will",
+    "what'll've": "what will have", "what're": "what are", "what's": "what is",
+    "what've": "what have", "when's": "when is", "when've": "when have",
+    "where'd": "where did", "where's": "where is", "where've": "where have",
+    "who'll": "who will", "who'll've": "who will have", "who's": "who is",
+    "who've": "who have", "why's": "why is", "why've": "why have", "will've": "will have",
+    "won't": "will not", "won't've": "will not have", "would've": "would have",
+    "wouldn't": "would not", "wouldn't've": "would not have", "y'all": "you all",
+    "y'all'd": "you all would", "y'all'd've": "you all would have",
+    "y'all're": "you all are", "y'all've": "you all have", "you'd": "you had",
+    "you'd've": "you would have", "you'll": "you will", "you'll've": "you will have",
+    "you're": "you are", "you've": "you have"
+}
 
-# Only download if missing
-def safe_download(resource):
-    try:
-        nltk.data.find(resource)
-    except LookupError:
-        nltk.download(resource, download_dir=nltk_data_path)
-        
-resources = [
-    "corpora/stopwords",
-    "tokenizers/punkt",  # This is already here but needs to be downloaded correctly
-    "corpora/wordnet",
-    "corpora/omw-1.4"
-]
+def get_stopwords():
+    stop_words = set(nltk.corpus.stopwords.words("english"))
+    stop_words.discard("not")
+    return stop_words
 
-# Make sure punkt is downloaded properly
-nltk.download('punkt', download_dir=nltk_data_path, quiet=True)
+def expand_contractions(text):
+    return ' '.join([contractions_dict.get(word, word) for word in text.split()])
 
-for res in resources:
-    safe_download(res)
+def clean_text(text):
+    stop_words = get_stopwords()
+    text = text.lower()
+    text = expand_contractions(text)
+    text = re.sub(r'\d+', '', text)
+    text = ''.join([c for c in text if c not in punctuation])
+    text = ' '.join([word for word in text.split() if word not in stop_words])
+    text = ' '.join(text.split())
+    return text
 
-# === Load ML Model ===
-model_path = "model_xgb.sav"
-model = pickle.load(open(model_path, "rb"))
+def lemmatize(text):
+    words = nltk.word_tokenize(text)
+    return ' '.join([lemmatizer.lemmatize(w) for w in words])
 
-# === Streamlit UI ===
-st.set_page_config(page_title="S-LCA Compliance Classifier", layout="wide")
-st.title("Text-Based Compliance Classification for S-LCA")
+def preprocess_text(text):
+    sentences = nltk.sent_tokenize(text)
+    cleaned = [lemmatize(clean_text(sentence)) for sentence in sentences]
+    return ' '.join(cleaned), cleaned
 
-# Sidebar: File upload
-st.sidebar.header("Step 1: Upload PDF")
-uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
-
-if uploaded_file:
-    # Extract raw text
-    raw_text = extract_text_from_pdf(uploaded_file)
-    st.subheader("Step 2: Extracted Text Preview")
-    st.write(raw_text[:1000] + "...")  # Preview only
-
-    # Preprocess
-    st.subheader("Step 3: Preprocessing & Lemmatization")
-    cleaned_full_text, cleaned_sentences = preprocess_text(raw_text)
-    st.success("Preprocessing complete.")
-
-    # Keyword config (can expand)
-    topics = ["freedom of association", "collective bargaining"]
-
-    # Find sentences with keywords
-    results = find_keywords_with_context(cleaned_sentences, topics)
-
-    if results:
-        df = pd.DataFrame(results, columns=["lemmatize"])
-        st.subheader("Step 4: Sentences with Keywords")
-        st.dataframe(df, use_container_width=True)
-
-        # Predict button
-        if st.button("Step 5: Predict Compliance"):
-            df["Performance Score"] = model.predict(df["lemmatize"])
-            st.subheader("Step 6: Prediction Results")
-            st.dataframe(df, use_container_width=True)
-    else:
-        st.warning("No keyword-related sentences found.")
-else:
-    st.info("Upload a PDF file from the sidebar to begin.")
+def find_keywords_with_context(sentences, keywords):
+    results = []
+    for sentence in sentences:
+        words = sentence.split()
+        for i, word in enumerate(words):
+            for keyword in keywords:
+                if keyword in ' '.join(words[i:i+len(keyword.split())]):
+                    start = max(i - 5, 0)
+                    end = min(i + 5 + len(keyword.split()), len(words))
+                    snippet = ' '.join(words[start:end])
+                    results.append([snippet])
+                    break
+    return results
