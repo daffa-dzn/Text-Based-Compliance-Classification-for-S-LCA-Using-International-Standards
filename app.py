@@ -16,12 +16,23 @@ nltk.data.path.append(nltk_data_path)
 # Only download if missing
 def safe_download(resource):
     try:
-        nltk.data.find(f"corpora/{resource}")
+        nltk.data.find(resource)
     except LookupError:
         nltk.download(resource, download_dir=nltk_data_path)
 
-for res in ['stopwords', 'punkt', 'wordnet', 'omw-1.4']:
-    safe_download(res)
+# Use correct resource names
+resources = [
+    "stopwords",
+    "punkt",
+    "wordnet",
+    "omw-1.4"
+]
+
+for res in resources:
+    try:
+        nltk.data.find(res)
+    except LookupError:
+        nltk.download(res)
 
 # === Load ML Model ===
 model_path = "model_xgb.sav"
