@@ -1,55 +1,68 @@
 import streamlit as st
 import pandas as pd
+import os
+import nltk
 import pickle
+
+from nltk.corpus import stopwords
 from utils.pdf_utils import extract_text_from_pdf
 from utils.preprocessing import preprocess_text, find_keywords_with_context
-import nltk
-import os
 
-# 1. Create a local nltk_data dir (once)
+# === NLTK Setup ===
 nltk_data_path = os.path.join(os.path.dirname(__file__), "nltk_data")
 os.makedirs(nltk_data_path, exist_ok=True)
-
-# 2. Tell NLTK to use it
 nltk.data.path.append(nltk_data_path)
 
-# 3. Download resources to that local path
-nltk.download("stopwords", download_dir=nltk_data_path)
-nltk.download("punkt", download_dir=nltk_data_path)
-nltk.download("wordnet", download_dir=nltk_data_path)
-nltk.download("omw-1.4", download_dir=nltk_data_path)
+# Only download if missing
+def safe_download(resource):
+    try:
+        nltk.data.find(f"corpora/{resource}")
+    except LookupError:
+        nltk.download(resource, download_dir=nltk_data_path)
 
-# Load model
-model = pickle.load(open("model_xgb.sav", "rb"))
+for res in ['stopwords', 'punkt', 'wordnet', 'omw-1.4']:
+    safe_download(res)
 
-# UI - Sidebar
-st.sidebar.title("Upload PDF")
+# === Load ML Model ===
+model_path = "model_xgb.sav"
+model = pickle.load(open(model_path, "rb"))
+
+# === Streamlit UI ===
+st.set_page_config(page_title="S-LCA Compliance Classifier", layout="wide")
+st.title("Text-Based Compliance Classification for S-LCA")
+
+# Sidebar: File upload
+st.sidebar.header("Step 1: Upload PDF")
 uploaded_file = st.sidebar.file_uploader("Choose a PDF file", type="pdf")
 
-# UI - Main
-st.title("S-LCA Text-Based Compliance Classification")
-
 if uploaded_file:
+    # Extract raw text
     raw_text = extract_text_from_pdf(uploaded_file)
-    st.subheader("Extracted Text Preview")
-    st.write(raw_text[:1000] + "...")
+    st.subheader("Step 2: Extracted Text Preview")
+    st.write(raw_text[:1000] + "...")  # Preview only
 
-    preprocessed_text, cleaned_sentences = preprocess_text(raw_text)
+    # Preprocess
+    st.subheader("Step 3: Preprocessing & Lemmatization")
+    cleaned_full_text, cleaned_sentences = preprocess_text(raw_text)
+    st.success("Preprocessing complete.")
 
-    # Define your S-LCA topics
-    topics = ["freedom of association", "collective bargaining"]  # Add more as needed
+    # Keyword config (can expand)
+    topics = ["freedom of association", "collective bargaining"]
 
+    # Find sentences with keywords
     results = find_keywords_with_context(cleaned_sentences, topics)
 
     if results:
         df = pd.DataFrame(results, columns=["lemmatize"])
-        st.subheader("Sentences with Keywords")
-        st.dataframe(df)
+        st.subheader("Step 4: Sentences with Keywords")
+        st.dataframe(df, use_container_width=True)
 
-        if st.button("Predict Compliance"):
-            predictions = model.predict(df["lemmatize"])
-            df["Performance Score"] = predictions
-            st.subheader("Prediction Results")
-            st.dataframe(df)
+        # Predict button
+        if st.button("Step 5: Predict Compliance"):
+            df["Performance Score"] = model.predict(df["lemmatize"])
+            st.subheader("Step 6: Prediction Results")
+            st.dataframe(df, use_container_width=True)
     else:
-        st.warning("No relevant sentences with specified keywords were found.")
+        st.warning("No keyword-related sentences found.")
+else:
+    st.info("Upload a PDF file from the sidebar to begin.")
