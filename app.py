@@ -22,10 +22,13 @@ def safe_download(resource):
         
 resources = [
     "corpora/stopwords",
-    "tokenizers/punkt",
+    "tokenizers/punkt",  # This is already here but needs to be downloaded correctly
     "corpora/wordnet",
     "corpora/omw-1.4"
 ]
+
+# Make sure punkt is downloaded properly
+nltk.download('punkt', download_dir=nltk_data_path, quiet=True)
 
 for res in resources:
     safe_download(res)
