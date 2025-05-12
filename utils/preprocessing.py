@@ -3,6 +3,7 @@ import re
 from nltk.stem import WordNetLemmatizer
 from string import punctuation
 from nltk.tokenize import PunktSentenceTokenizer
+from nltk.tokenize import TreebankWordTokenizer
 
 
 lemmatizer = WordNetLemmatizer()
@@ -67,7 +68,8 @@ def clean_text(text):
     return text
 
 def lemmatize(text):
-    words = nltk.word_tokenize(text)
+    tokenizer = TreebankWordTokenizer()
+    words = tokenizer.tokenize(text)
     return ' '.join([lemmatizer.lemmatize(w) for w in words])
 
 def preprocess_text(text):
