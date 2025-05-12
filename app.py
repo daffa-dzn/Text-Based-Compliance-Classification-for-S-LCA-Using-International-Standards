@@ -16,11 +16,18 @@ nltk.data.path.append(nltk_data_path)
 # Only download if missing
 def safe_download(resource):
     try:
-        nltk.data.find(f"corpora/{resource}")
+        nltk.data.find(resource)
     except LookupError:
         nltk.download(resource, download_dir=nltk_data_path)
+        
+resources = [
+    "corpora/stopwords",
+    "tokenizers/punkt",
+    "corpora/wordnet",
+    "corpora/omw-1.4"
+]
 
-for res in ['stopwords', 'punkt', 'wordnet', 'omw-1.4']:
+for res in resources:
     safe_download(res)
 
 # === Load ML Model ===
