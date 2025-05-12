@@ -28,6 +28,19 @@ resources = [
     "omw-1.4"
 ]
 
+def safe_download(resource):
+    try:
+        nltk.data.find(resource)
+        print(f"{resource} already downloaded.")
+    except LookupError:
+        print(f"Downloading {resource}...")
+        nltk.download(resource, download_dir=nltk_data_path)
+        try:
+            nltk.data.find(resource)
+            print(f"Successfully downloaded: {resource}")
+        except LookupError:
+            print(f"Failed to download: {resource}")
+            
 for res in resources:
     try:
         nltk.data.find(res)
