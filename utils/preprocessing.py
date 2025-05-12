@@ -2,6 +2,8 @@ import nltk
 import re
 from nltk.stem import WordNetLemmatizer
 from string import punctuation
+from nltk.tokenize import PunktSentenceTokenizer
+
 
 lemmatizer = WordNetLemmatizer()
 
@@ -69,7 +71,8 @@ def lemmatize(text):
     return ' '.join([lemmatizer.lemmatize(w) for w in words])
 
 def preprocess_text(text):
-    sentences = nltk.sent_tokenize(text)
+    tokenizer = PunktSentenceTokenizer()
+    sentences = tokenizer.tokenize(text)
     cleaned = [lemmatize(clean_text(sentence)) for sentence in sentences]
     return ' '.join(cleaned), cleaned
 
