@@ -10,6 +10,18 @@ nltk.download('punkt')
 nltk.download('wordnet')
 nltk.download('omw-1.4')
 
+from nltk.data import find
+from nltk import download
+
+def safe_download(package):
+    try:
+        find(f'corpora/{package}')
+    except LookupError:
+        download(package)
+
+for pkg in ['stopwords', 'punkt', 'wordnet', 'omw-1.4']:
+    safe_download(pkg)
+
 # Load model
 model = pickle.load(open("model_xgb.sav", "rb"))
 
