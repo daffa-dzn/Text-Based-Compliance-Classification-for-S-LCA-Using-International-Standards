@@ -4,23 +4,20 @@ import pickle
 from utils.pdf_utils import extract_text_from_pdf
 from utils.preprocessing import preprocess_text, find_keywords_with_context
 import nltk
+import os
 
-nltk.download('stopwords')
-nltk.download('punkt')
-nltk.download('wordnet')
-nltk.download('omw-1.4')
+# 1. Create a local nltk_data dir (once)
+nltk_data_path = os.path.join(os.path.dirname(__file__), "nltk_data")
+os.makedirs(nltk_data_path, exist_ok=True)
 
-from nltk.data import find
-from nltk import download
+# 2. Tell NLTK to use it
+nltk.data.path.append(nltk_data_path)
 
-def safe_download(package):
-    try:
-        find(f'corpora/{package}')
-    except LookupError:
-        download(package)
-
-for pkg in ['stopwords', 'punkt', 'wordnet', 'omw-1.4']:
-    safe_download(pkg)
+# 3. Download resources to that local path
+nltk.download("stopwords", download_dir=nltk_data_path)
+nltk.download("punkt", download_dir=nltk_data_path)
+nltk.download("wordnet", download_dir=nltk_data_path)
+nltk.download("omw-1.4", download_dir=nltk_data_path)
 
 # Load model
 model = pickle.load(open("model_xgb.sav", "rb"))
